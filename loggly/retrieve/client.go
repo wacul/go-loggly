@@ -5,6 +5,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/wacul/transport/expbackoff"
 )
 
 // Client for loggly retrieve API.
@@ -19,7 +22,19 @@ type Client struct {
 // New client will be generated
 func New(account, userName, password string) *Client {
 	return &Client{
-		client:   &http.Client{},
+		client: &http.Client{
+			Transport: &expbackoff.Transport{
+				Min:    5 * time.Second,
+				Max:    20 * time.Second,
+				Factor: 1.5,
+				RetryFunc: func(res *http.Response, err error) bool {
+					if err != nil {
+						return false
+					}
+					return res.StatusCode/100 == 5
+				},
+			},
+		},
 		host:     fmt.Sprintf("%s.loggly.com", account),
 		userName: userName,
 		password: password,
@@ -28,12 +43,12 @@ func New(account, userName, password string) *Client {
 
 // Search endpoint.
 func (c *Client) Search() *Search {
-	return &Search{client: c}
+	return newSearch(c)
 }
 
 // Events endpoint.
 func (c *Client) Events() *Events {
-	return &Events{client: c}
+	return newEvents(c)
 }
 
 // TODO: implement Fields()
@@ -53,7 +68,7 @@ func (c *Client) createRequest(method, path string, query url.Values, body io.Re
 		Host:   c.host,
 		Path:   path,
 	}
-	if query == nil {
+	if query != nil {
 		u.RawQuery = query.Encode()
 	}
 	req, err := http.NewRequest(method, u.String(), body)

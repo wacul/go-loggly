@@ -17,8 +17,8 @@ type Events struct {
 	EventsOption
 }
 
-func newEvent(client *Client) Events {
-	return Events{
+func newEvents(client *Client) *Events {
+	return &Events{
 		client: client,
 		EventsOption: EventsOption{
 			Page:   0,
@@ -41,6 +41,8 @@ type EventsResponse struct {
 	TotalEvents int `json:"total_events"`
 	Page        int `json:"page"`
 	Events      []struct {
+		Raw        string   `json:"raw"`
+		Unparsed   string   `json:"unparsed"`
 		Tags       []string `json:"tags"`
 		Timestamp  int64    `json:"timestamp"`
 		LogMessage string   `json:"logmsg"`
@@ -52,11 +54,13 @@ type EventsResponse struct {
 				Severity  string    `json:"severity"`
 				Facility  string    `json:"facility"`
 			} `json:"syslog"`
-			JSON map[string]interface{} `json:"json"`
+			JSON    map[string]interface{} `json:"json"`
+			Derived map[string]interface{} `json:"derived"`
 		} `json:"event"`
 		LogTypes []string `json:"logtypes"`
 		ID       string   `json:"id"`
 	} `json:"events"`
+	Raw string `json:-`
 }
 
 type EventsError struct {
@@ -126,6 +130,7 @@ func (s *Events) Do(rsid string) (*EventsResponse, error) {
 	if err := json.Unmarshal(body, &result); err != nil {
 		return nil, err
 	}
+	result.Raw = string(body)
 
 	return &result, nil
 }

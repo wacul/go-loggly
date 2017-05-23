@@ -15,8 +15,8 @@ type Search struct {
 	SearchOption
 }
 
-func newSearch(client *Client) Search {
-	return Search{
+func newSearch(client *Client) *Search {
+	return &Search{
 		client: client,
 		SearchOption: SearchOption{
 			From:  "-24h",
@@ -105,7 +105,7 @@ func (s *Search) Do(size int, query string) (*SearchResponse, error) {
 	res, err := s.client.call("GET", "/apiv2/search", url.Values{
 		"q":     []string{query},
 		"from":  []string{s.SearchOption.From},
-		"query": []string{s.SearchOption.End},
+		"until": []string{s.SearchOption.End},
 		"order": []string{s.SearchOption.Order.String()},
 	}, nil)
 	if err != nil {
